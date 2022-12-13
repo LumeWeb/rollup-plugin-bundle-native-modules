@@ -122,3 +122,4 @@ export default function bundleNativeModulesPlugin() {
     },
   } as Plugin;
 }
+export { bundleNativeModulesPlugin };
