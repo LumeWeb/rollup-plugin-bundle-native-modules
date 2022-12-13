@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.bundleNativeModulesPlugin = void 0;
 const ast_matcher_1 = __importDefault(require("ast-matcher"));
 const magic_string_1 = __importDefault(require("magic-string"));
 // @ts-ignore
@@ -100,4 +101,5 @@ function bundleNativeModulesPlugin() {
     };
 }
 exports.default = bundleNativeModulesPlugin;
+exports.bundleNativeModulesPlugin = bundleNativeModulesPlugin;
 //# sourceMappingURL=index.js.map
