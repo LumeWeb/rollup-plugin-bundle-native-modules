@@ -13,13 +13,18 @@ const loaderFunction = `function loadNativeModuleTemp(module, data) {
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
   const path = require("path");
-  const outputPath = path.join(tempDir, module, "build", "Release");
+  const loadPath = path.join(tempDir, module);
+  const outputPath = path.join(loadPath, "build", "Release");
   const modulePath = path.join(outputPath, module + ".node");
 
   fs.mkdirSync(outputPath, { recursive: true });
   fs.writeFileSync(modulePath, Buffer.from(data, "base64"));
 
-  return modulePath;
+  if (process.pkg) {
+    process.pkg = undefined;
+  }
+
+  return loadPath;
 }`;
 function bundleNativeModulesPlugin() {
     const edits = [];
