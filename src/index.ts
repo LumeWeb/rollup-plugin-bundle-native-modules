@@ -28,25 +28,6 @@ type Edit = [number, number];
 type AstNode = { start: number; end: number };
 
 export default function bundleNativeModulesPlugin() {
-  const edits: Edit[] = [];
-
-  /*
-  Copied from https://github.com/sastan/rollup-plugin-define/blob/main/src/define.ts
-   */
-  function markEdited(node: AstNode, edits: Edit[]): number | false {
-    for (const [start, end] of edits) {
-      if (
-        (start <= node.start && node.start < end) ||
-        (start < node.end && node.end <= end)
-      ) {
-        return false; // Already edited
-      }
-    }
-
-    // Not edited
-    return edits.push([node.start, node.end]);
-  }
-
   return {
     name: "bundle-native-modules",
     transform(src, id, ast: any) {
@@ -79,6 +60,25 @@ export default function bundleNativeModulesPlugin() {
         } catch (e) {
           throw e;
         }
+      }
+
+      const edits: Edit[] = [];
+
+      /*
+      Copied from https://github.com/sastan/rollup-plugin-define/blob/main/src/define.ts
+       */
+      function markEdited(node: AstNode, edits: Edit[]): number | false {
+        for (const [start, end] of edits) {
+          if (
+            (start <= node.start && node.start < end) ||
+            (start < node.end && node.end <= end)
+          ) {
+            return false; // Already edited
+          }
+        }
+
+        // Not edited
+        return edits.push([node.start, node.end]);
       }
 
       const findLoady = astMatcher("require('loady')(__str_aName, __any)");
