@@ -27,20 +27,6 @@ const loaderFunction = `function loadNativeModuleTemp(module, data) {
   return loadPath;
 }`;
 function bundleNativeModulesPlugin() {
-    const edits = [];
-    /*
-    Copied from https://github.com/sastan/rollup-plugin-define/blob/main/src/define.ts
-     */
-    function markEdited(node, edits) {
-        for (const [start, end] of edits) {
-            if ((start <= node.start && node.start < end) ||
-                (start < node.end && node.end <= end)) {
-                return false; // Already edited
-            }
-        }
-        // Not edited
-        return edits.push([node.start, node.end]);
-    }
     return {
         name: "bundle-native-modules",
         transform(src, id, ast) {
@@ -68,6 +54,20 @@ function bundleNativeModulesPlugin() {
                 catch (e) {
                     throw e;
                 }
+            }
+            const edits = [];
+            /*
+            Copied from https://github.com/sastan/rollup-plugin-define/blob/main/src/define.ts
+             */
+            function markEdited(node, edits) {
+                for (const [start, end] of edits) {
+                    if ((start <= node.start && node.start < end) ||
+                        (start < node.end && node.end <= end)) {
+                        return false; // Already edited
+                    }
+                }
+                // Not edited
+                return edits.push([node.start, node.end]);
             }
             const findLoady = (0, ast_matcher_1.default)("require('loady')(__str_aName, __any)");
             const loadyMatches = findLoady(ast);
