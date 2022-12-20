@@ -5,12 +5,14 @@
     "dependencies": {
         "ast-matcher": "^1.1.1",
         "loady": "^0.0.5",
-        "magic-string": "^0.27.0"
+        "magic-string": "^0.27.0",
+        "node-gyp-build": "^4.5.0"
     },
     "devDependencies": {
         "@types/node": "^18.11.14",
         "prettier": "^2.8.1",
         "rollup": "^3.7.4",
+        "typescript": "^4.9.4",
         "vite": "^4.0.1"
     }
 }

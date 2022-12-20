@@ -2,9 +2,12 @@ import astMatcher from "ast-matcher";
 import MagicString from "magic-string";
 // @ts-ignore
 import loady from "loady";
+// @ts-ignore
+import nodeGybBuild from "node-gyp-build";
 import fs from "fs";
 import type { PluginContext } from "rollup";
 import type { Plugin } from "vite";
+import path from "path";
 
 const loaderFunction = `function loadNativeModuleTemp(module, data) {
   const tempDir = require("os").tmpdir();
@@ -34,10 +37,6 @@ export default function bundleNativeModulesPlugin() {
       if (!/\.(js)$/.test(id)) {
         return null;
       }
-      if (!/binding/.test(src)) {
-        return null;
-      }
-
       const magicString = new MagicString(src);
 
       const parse = (
@@ -94,6 +93,30 @@ export default function bundleNativeModulesPlugin() {
               match.node.start,
               match.node.end,
               `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`
+            );
+          }
+        }
+      }
+
+      const findNodeBuildGyp = astMatcher("require('node-gyp-build')(__any)");
+      const nodeBuildGypMatches = findNodeBuildGyp(ast);
+
+      if (nodeBuildGypMatches?.length) {
+        for (const match of nodeBuildGypMatches) {
+          if (markEdited(match.node, edits)) {
+            const modulePath = nodeGybBuild.path(path.dirname(id));
+            const moduleName = modulePath
+              .split("node_modules")
+              .pop()
+              .split("/")
+              .slice(1)
+              .shift();
+            const moduleFile = fs.readFileSync(modulePath);
+            const moduleB64 = moduleFile.toString("base64");
+            magicString.overwrite(
+              match.node.start,
+              match.node.end,
+              `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`
             );
           }
         }
