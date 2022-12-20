@@ -8,7 +8,10 @@ const ast_matcher_1 = __importDefault(require("ast-matcher"));
 const magic_string_1 = __importDefault(require("magic-string"));
 // @ts-ignore
 const loady_1 = __importDefault(require("loady"));
+// @ts-ignore
+const node_gyp_build_1 = __importDefault(require("node-gyp-build"));
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const loaderFunction = `function loadNativeModuleTemp(module, data) {
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
@@ -31,9 +34,6 @@ function bundleNativeModulesPlugin() {
         name: "bundle-native-modules",
         transform(src, id, ast) {
             if (!/\.(js)$/.test(id)) {
-                return null;
-            }
-            if (!/binding/.test(src)) {
                 return null;
             }
             const magicString = new magic_string_1.default(src);
@@ -78,6 +78,24 @@ function bundleNativeModulesPlugin() {
                         const moduleFile = fs_1.default.readFileSync(modulePath);
                         const moduleB64 = moduleFile.toString("base64");
                         magicString.overwrite(match.node.start, match.node.end, `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`);
+                    }
+                }
+            }
+            const findNodeBuildGyp = (0, ast_matcher_1.default)("require('node-gyp-build')(__any)");
+            const nodeBuildGypMatches = findNodeBuildGyp(ast);
+            if (nodeBuildGypMatches?.length) {
+                for (const match of nodeBuildGypMatches) {
+                    if (markEdited(match.node, edits)) {
+                        const modulePath = node_gyp_build_1.default.path(path_1.default.dirname(id));
+                        const moduleName = modulePath
+                            .split("node_modules")
+                            .pop()
+                            .split("/")
+                            .slice(1)
+                            .shift();
+                        const moduleFile = fs_1.default.readFileSync(modulePath);
+                        const moduleB64 = moduleFile.toString("base64");
+                        magicString.overwrite(match.node.start, match.node.end, `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`);
                     }
                 }
             }
