@@ -12,7 +12,7 @@ import type { Plugin } from "vite";
 import path from "path";
 
 const loaderFunction = `
-import loady from "loady";
+const loady = require("loady");
 function loadNativeModuleTemp (module, data) {
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
