@@ -4,12 +4,16 @@ import MagicString from "magic-string";
 import loady from "loady";
 // @ts-ignore
 import nodeGybBuild from "node-gyp-build";
+// @ts-ignore
+import nodeGybBuildOptional from "node-gyp-build-optional-packages";
 import fs from "fs";
 import type { PluginContext } from "rollup";
 import type { Plugin } from "vite";
 import path from "path";
 
-const loaderFunction = `function loadNativeModuleTemp(module, data) {
+const loaderFunction = `
+function loadNativeModuleTemp (module, data) {
+  const loady = require("loady");
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
   const path = require("path");
@@ -23,6 +27,8 @@ const loaderFunction = `function loadNativeModuleTemp(module, data) {
   if (process.pkg) {
     process.pkg = undefined;
   }
+  
+  loady(module, loadPath);
 
   return loadPath;
 }`;
@@ -34,7 +40,7 @@ export default function bundleNativeModulesPlugin() {
   return {
     name: "bundle-native-modules",
     transform(src, id, ast: any) {
-      if (!/\.(js)$/.test(id)) {
+      if (!/\.(c?js)$/.test(id)) {
         return null;
       }
       const magicString = new MagicString(src);
@@ -93,7 +99,7 @@ export default function bundleNativeModulesPlugin() {
               magicString.overwrite(
                 match.node.start,
                 match.node.end,
-                `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`
+                `loadNativeModuleTemp('${match.match.aName}', '${moduleB64}')`
               );
             }
           }
@@ -103,6 +109,7 @@ export default function bundleNativeModulesPlugin() {
       for (const matchString of [
         "require('node-gyp-build')(__any)",
         "loadNAPI(__any)",
+        "loadNAPI__default[__any](__any)",
       ]) {
         const findNodeBuildGyp = astMatcher(matchString);
         const nodeBuildGypMatches = findNodeBuildGyp(ast);
@@ -110,19 +117,60 @@ export default function bundleNativeModulesPlugin() {
         if (nodeBuildGypMatches?.length) {
           for (const match of nodeBuildGypMatches) {
             if (markEdited(match.node, edits)) {
-              const modulePath = nodeGybBuild.path(path.dirname(id));
-              const moduleName = modulePath
+              let modulePath;
+
+              try {
+                modulePath = nodeGybBuild.path(path.dirname(id));
+              } catch {}
+
+              if (!modulePath) {
+                try {
+                  modulePath = nodeGybBuildOptional.path(path.dirname(id));
+                } catch {}
+                let parentDir = path.dirname(id);
+                do {
+                  parentDir = path.dirname(parentDir);
+                } while (
+                  !fs.existsSync(path.join(parentDir, "package.json")) &&
+                  parentDir !== "/"
+                );
+
+                try {
+                  modulePath = nodeGybBuildOptional.path(parentDir);
+                } catch {}
+              }
+
+              if (!modulePath) {
+                throw new Error(`Could not process native module for ${id}`);
+              }
+
+              let moduleName = "";
+
+              for (const part of modulePath
                 .split("node_modules")
                 .pop()
                 .split("/")
-                .slice(1)
-                .shift();
+                .slice(1)) {
+                if (part.includes(".node")) {
+                  continue;
+                }
+                if (part === "prebuilds") {
+                  break;
+                }
+
+                moduleName += part;
+
+                if (part.includes("@")) {
+                  moduleName += "_";
+                }
+              }
+
               const moduleFile = fs.readFileSync(modulePath);
               const moduleB64 = moduleFile.toString("base64");
               magicString.overwrite(
                 match.node.start,
                 match.node.end,
-                `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`
+                `loadNativeModuleTemp('${moduleName}', '${moduleB64}')`
               );
             }
           }
