@@ -28,7 +28,7 @@ function loadNativeModuleTemp (module, data) {
     process.pkg = undefined;
   }
   
-  loady(module, loadPath);
+ return loady(module, loadPath);
 }`;
 
 type Edit = [number, number];
