@@ -15,7 +15,7 @@ const node_gyp_build_optional_packages_1 = __importDefault(require("node-gyp-bui
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const loaderFunction = `
-import loady from "loady";
+const loady = require("loady");
 function loadNativeModuleTemp (module, data) {
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
