@@ -80,48 +80,54 @@ export default function bundleNativeModulesPlugin() {
         return edits.push([node.start, node.end]);
       }
 
-      const findLoady = astMatcher("require('loady')(__str_aName, __any)");
-      const loadyMatches = findLoady(ast);
+      for (const matchString of ["require('loady')(__str_aName, __any)"]) {
+        const findLoady = astMatcher(matchString);
+        const loadyMatches = findLoady(ast);
 
-      if (loadyMatches?.length) {
-        for (const match of loadyMatches) {
-          if (markEdited(match.node, edits)) {
-            const modulePath = loady.resolve(match.match.aName, id);
-            const moduleFile = fs.readFileSync(modulePath);
-            const moduleB64 = moduleFile.toString("base64");
-            magicString.overwrite(
-              match.node.start,
-              match.node.end,
-              `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`
-            );
+        if (loadyMatches?.length) {
+          for (const match of loadyMatches) {
+            if (markEdited(match.node, edits)) {
+              const modulePath = loady.resolve(match.match.aName, id);
+              const moduleFile = fs.readFileSync(modulePath);
+              const moduleB64 = moduleFile.toString("base64");
+              magicString.overwrite(
+                match.node.start,
+                match.node.end,
+                `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`
+              );
+            }
           }
         }
       }
 
-      const findNodeBuildGyp = astMatcher("require('node-gyp-build')(__any)");
-      const nodeBuildGypMatches = findNodeBuildGyp(ast);
+      for (const matchString of [
+        "require('node-gyp-build')(__any)",
+        "loadNAPI(__any)",
+      ]) {
+        const findNodeBuildGyp = astMatcher(matchString);
+        const nodeBuildGypMatches = findNodeBuildGyp(ast);
 
-      if (nodeBuildGypMatches?.length) {
-        for (const match of nodeBuildGypMatches) {
-          if (markEdited(match.node, edits)) {
-            const modulePath = nodeGybBuild.path(path.dirname(id));
-            const moduleName = modulePath
-              .split("node_modules")
-              .pop()
-              .split("/")
-              .slice(1)
-              .shift();
-            const moduleFile = fs.readFileSync(modulePath);
-            const moduleB64 = moduleFile.toString("base64");
-            magicString.overwrite(
-              match.node.start,
-              match.node.end,
-              `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`
-            );
+        if (nodeBuildGypMatches?.length) {
+          for (const match of nodeBuildGypMatches) {
+            if (markEdited(match.node, edits)) {
+              const modulePath = nodeGybBuild.path(path.dirname(id));
+              const moduleName = modulePath
+                .split("node_modules")
+                .pop()
+                .split("/")
+                .slice(1)
+                .shift();
+              const moduleFile = fs.readFileSync(modulePath);
+              const moduleB64 = moduleFile.toString("base64");
+              magicString.overwrite(
+                match.node.start,
+                match.node.end,
+                `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`
+              );
+            }
           }
         }
       }
-
       if (edits.length === 0) {
         return null;
       }
