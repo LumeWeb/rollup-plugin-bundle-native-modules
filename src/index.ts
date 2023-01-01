@@ -12,8 +12,8 @@ import type { Plugin } from "vite";
 import path from "path";
 
 const loaderFunction = `
-const loady = require("loady");
 function loadNativeModuleTemp (module, data) {
+  const loady = require("loady");
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
   const path = require("path");
