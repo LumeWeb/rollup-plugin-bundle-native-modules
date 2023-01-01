@@ -6,7 +6,8 @@
         "ast-matcher": "^1.1.1",
         "loady": "^0.0.5",
         "magic-string": "^0.27.0",
-        "node-gyp-build": "^4.5.0"
+        "node-gyp-build": "^4.5.0",
+        "node-gyp-build-optional-packages": "^5.0.5"
     },
     "devDependencies": {
         "@types/node": "^18.11.14",
