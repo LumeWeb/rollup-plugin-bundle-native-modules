@@ -29,8 +29,6 @@ function loadNativeModuleTemp (module, data) {
   }
   
   loady(module, loadPath);
-
-  return loadPath;
 }`;
 
 type Edit = [number, number];
