@@ -31,7 +31,7 @@ function loadNativeModuleTemp (module, data) {
     process.pkg = undefined;
   }
   
-  loady(module, loadPath);
+ return loady(module, loadPath);
 }`;
 function bundleNativeModulesPlugin() {
     return {
