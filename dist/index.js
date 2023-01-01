@@ -69,33 +69,40 @@ function bundleNativeModulesPlugin() {
                 // Not edited
                 return edits.push([node.start, node.end]);
             }
-            const findLoady = (0, ast_matcher_1.default)("require('loady')(__str_aName, __any)");
-            const loadyMatches = findLoady(ast);
-            if (loadyMatches?.length) {
-                for (const match of loadyMatches) {
-                    if (markEdited(match.node, edits)) {
-                        const modulePath = loady_1.default.resolve(match.match.aName, id);
-                        const moduleFile = fs_1.default.readFileSync(modulePath);
-                        const moduleB64 = moduleFile.toString("base64");
-                        magicString.overwrite(match.node.start, match.node.end, `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`);
+            for (const matchString of ["require('loady')(__str_aName, __any)"]) {
+                const findLoady = (0, ast_matcher_1.default)(matchString);
+                const loadyMatches = findLoady(ast);
+                if (loadyMatches?.length) {
+                    for (const match of loadyMatches) {
+                        if (markEdited(match.node, edits)) {
+                            const modulePath = loady_1.default.resolve(match.match.aName, id);
+                            const moduleFile = fs_1.default.readFileSync(modulePath);
+                            const moduleB64 = moduleFile.toString("base64");
+                            magicString.overwrite(match.node.start, match.node.end, `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`);
+                        }
                     }
                 }
             }
-            const findNodeBuildGyp = (0, ast_matcher_1.default)("require('node-gyp-build')(__any)");
-            const nodeBuildGypMatches = findNodeBuildGyp(ast);
-            if (nodeBuildGypMatches?.length) {
-                for (const match of nodeBuildGypMatches) {
-                    if (markEdited(match.node, edits)) {
-                        const modulePath = node_gyp_build_1.default.path(path_1.default.dirname(id));
-                        const moduleName = modulePath
-                            .split("node_modules")
-                            .pop()
-                            .split("/")
-                            .slice(1)
-                            .shift();
-                        const moduleFile = fs_1.default.readFileSync(modulePath);
-                        const moduleB64 = moduleFile.toString("base64");
-                        magicString.overwrite(match.node.start, match.node.end, `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`);
+            for (const matchString of [
+                "require('node-gyp-build')(__any)",
+                "loadNAPI(__any)",
+            ]) {
+                const findNodeBuildGyp = (0, ast_matcher_1.default)(matchString);
+                const nodeBuildGypMatches = findNodeBuildGyp(ast);
+                if (nodeBuildGypMatches?.length) {
+                    for (const match of nodeBuildGypMatches) {
+                        if (markEdited(match.node, edits)) {
+                            const modulePath = node_gyp_build_1.default.path(path_1.default.dirname(id));
+                            const moduleName = modulePath
+                                .split("node_modules")
+                                .pop()
+                                .split("/")
+                                .slice(1)
+                                .shift();
+                            const moduleFile = fs_1.default.readFileSync(modulePath);
+                            const moduleB64 = moduleFile.toString("base64");
+                            magicString.overwrite(match.node.start, match.node.end, `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`);
+                        }
                     }
                 }
             }
