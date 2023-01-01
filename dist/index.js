@@ -10,9 +10,13 @@ const magic_string_1 = __importDefault(require("magic-string"));
 const loady_1 = __importDefault(require("loady"));
 // @ts-ignore
 const node_gyp_build_1 = __importDefault(require("node-gyp-build"));
+// @ts-ignore
+const node_gyp_build_optional_packages_1 = __importDefault(require("node-gyp-build-optional-packages"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const loaderFunction = `function loadNativeModuleTemp(module, data) {
+const loaderFunction = `
+function loadNativeModuleTemp (module, data) {
+  const loady = require("loady");
   const tempDir = require("os").tmpdir();
   const fs = require("fs");
   const path = require("path");
@@ -26,6 +30,8 @@ const loaderFunction = `function loadNativeModuleTemp(module, data) {
   if (process.pkg) {
     process.pkg = undefined;
   }
+  
+  loady(module, loadPath);
 
   return loadPath;
 }`;
@@ -33,7 +39,7 @@ function bundleNativeModulesPlugin() {
     return {
         name: "bundle-native-modules",
         transform(src, id, ast) {
-            if (!/\.(js)$/.test(id)) {
+            if (!/\.(c?js)$/.test(id)) {
                 return null;
             }
             const magicString = new magic_string_1.default(src);
@@ -78,7 +84,7 @@ function bundleNativeModulesPlugin() {
                             const modulePath = loady_1.default.resolve(match.match.aName, id);
                             const moduleFile = fs_1.default.readFileSync(modulePath);
                             const moduleB64 = moduleFile.toString("base64");
-                            magicString.overwrite(match.node.start, match.node.end, `require('loady')('${match.match.aName}', loadNativeModuleTemp('${match.match.aName}', '${moduleB64}'))`);
+                            magicString.overwrite(match.node.start, match.node.end, `loadNativeModuleTemp('${match.match.aName}', '${moduleB64}')`);
                         }
                     }
                 }
@@ -86,22 +92,56 @@ function bundleNativeModulesPlugin() {
             for (const matchString of [
                 "require('node-gyp-build')(__any)",
                 "loadNAPI(__any)",
+                "loadNAPI__default[__any](__any)",
             ]) {
                 const findNodeBuildGyp = (0, ast_matcher_1.default)(matchString);
                 const nodeBuildGypMatches = findNodeBuildGyp(ast);
                 if (nodeBuildGypMatches?.length) {
                     for (const match of nodeBuildGypMatches) {
                         if (markEdited(match.node, edits)) {
-                            const modulePath = node_gyp_build_1.default.path(path_1.default.dirname(id));
-                            const moduleName = modulePath
+                            let modulePath;
+                            try {
+                                modulePath = node_gyp_build_1.default.path(path_1.default.dirname(id));
+                            }
+                            catch { }
+                            if (!modulePath) {
+                                try {
+                                    modulePath = node_gyp_build_optional_packages_1.default.path(path_1.default.dirname(id));
+                                }
+                                catch { }
+                                let parentDir = path_1.default.dirname(id);
+                                do {
+                                    parentDir = path_1.default.dirname(parentDir);
+                                } while (!fs_1.default.existsSync(path_1.default.join(parentDir, "package.json")) &&
+                                    parentDir !== "/");
+                                try {
+                                    modulePath = node_gyp_build_optional_packages_1.default.path(parentDir);
+                                }
+                                catch { }
+                            }
+                            if (!modulePath) {
+                                throw new Error(`Could not process native module for ${id}`);
+                            }
+                            let moduleName = "";
+                            for (const part of modulePath
                                 .split("node_modules")
                                 .pop()
                                 .split("/")
-                                .slice(1)
-                                .shift();
+                                .slice(1)) {
+                                if (part.includes(".node")) {
+                                    continue;
+                                }
+                                if (part === "prebuilds") {
+                                    break;
+                                }
+                                moduleName += part;
+                                if (part.includes("@")) {
+                                    moduleName += "_";
+                                }
+                            }
                             const moduleFile = fs_1.default.readFileSync(modulePath);
                             const moduleB64 = moduleFile.toString("base64");
-                            magicString.overwrite(match.node.start, match.node.end, `require('loady')('${moduleName}', loadNativeModuleTemp('${moduleName}', '${moduleB64}'))`);
+                            magicString.overwrite(match.node.start, match.node.end, `loadNativeModuleTemp('${moduleName}', '${moduleB64}')`);
                         }
                     }
                 }
